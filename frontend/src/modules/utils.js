@@ -7,7 +7,7 @@ export function setTerminalUpdater(fn) {
   updateTerminal = fn;
 }
 
-function add_message_to_terminal(message){    
+function add_message_to_terminal(message){  
     const {color, text} = message;
     if (!color || ! text){
         console.log("Invalid Message");

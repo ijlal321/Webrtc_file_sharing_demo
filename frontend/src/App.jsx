@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
 import {init_web_rtc_connection, init_web_rtc_data_channel, local_offer_create_and_send} from "./modules/webrtc.js";
 import { setTerminalUpdater } from "./modules/utils.js";
+import { registerSocketEvents } from "./modules/ws.js";
 
 function App() {
   const [terminal_messages, update_terminal_messages] = useState([]); 
-
   // allow utils.js to update messages.
   useEffect(() => {
     // Pass the update function to your utility
     setTerminalUpdater(update_terminal_messages);
   }, []);
+  
+  registerSocketEvents();
 
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
@@ -28,12 +30,12 @@ function App() {
       >
         Create Data Channel.
       </button>
-
+{/* 
       <button style={{margin:50, width:200, height:50, borderRadius:20, backgroundColor:"lightcyan", cursor:"pointer"}}
-        onClick={()=>init_web_rtc_data_channel(false)}
+        onClick={()=>}
       >
         Register Data Events.
-      </button>
+      </button> */}
 
 
       <button style={{margin:50, width:200, height:50, borderRadius:20, backgroundColor:"lightcyan", cursor:"pointer"}}

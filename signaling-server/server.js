@@ -1,7 +1,7 @@
 import express from "express";
 import { WebSocketServer } from "ws";
 import cors from "cors";
-
+import * as helper from "./helper.js";
 
 // Step1: Setting Up Server
 const app = express();
@@ -18,15 +18,26 @@ const wss = new WebSocketServer({ server });
 wss.on("connection", (ws) => {
   console.log("New client connected");
 
-  ws.on("message", (message) => {
-    console.log("Received:", message.toString());
-
-    // Broadcast message to all other clients
-    wss.clients.forEach((client) => {
-      if (client !== ws && client.readyState === ws.OPEN) {
-        client.send(message.toString());
+  ws.on("message", (data) => {
+    let message = JSON.parse(data);
+    if (message.label) {
+      switch (message.label) {
+        case "send_offer":
+          helper.send_msg_to_all_except_sender(wss, ws, {label: "receive_offer", data: message.data});
+          break;
+        case "send_answer":
+          helper.send_msg_to_all_except_sender(wss, ws, {label: "receive_answer", data: message.data});
+          break;
+        case "send_candidate":
+          helper.send_msg_to_all_except_sender(wss, ws, {label: "receive_candidate", data: message.data});
+          break
+        default:
+          console.log("Invalid Label Received: ", message.label);
       }
-    });
+    } else {
+      console.log("No Label Found in ws message");
+      ws.send("Invalid Message Received");
+    }
   });
 
   ws.on("close", () => {
