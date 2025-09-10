@@ -1,33 +1,55 @@
-import { useState } from "react";
-import { initConnection, startOffer, sendMessage } from "./webrtc";
+import { useState, useEffect } from "react";
+import {init_web_rtc_connection, init_web_rtc_data_channel, local_offer_create_and_send} from "./modules/webrtc.js";
+import { setTerminalUpdater } from "./modules/utils.js";
 
 function App() {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
+  const [terminal_messages, update_terminal_messages] = useState([]); 
+
+  // allow utils.js to update messages.
+  useEffect(() => {
+    // Pass the update function to your utility
+    setTerminalUpdater(update_terminal_messages);
+  }, []);
 
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      <h1>WebRTC Demo (Vite + React)</h1>
+      <h1>Welcome to Webrtc Demo App</h1>
+      <p>Our goal will be to generate a Production Level Webrtc connection for 2 clients.<br/> Meaning handling all
+        events, logging all connection states, and Most Importantly closing the connection on both sides gracefully.
+      </p>
+      <button style={{margin:50, width:200, height:50, borderRadius:20, backgroundColor:"lightcyan", cursor:"pointer"}}
+        onClick={init_web_rtc_connection}
+      >
+        Create Webrtc Connection.
+      </button>
 
-      <div style={{ marginBottom: "1rem" }}>
-        <button onClick={() => initConnection(setMessages)}>Connect</button>
-        <button onClick={startOffer}>Start Offer</button>
-      </div>
+      <button style={{margin:50, width:200, height:50, borderRadius:20, backgroundColor:"lightcyan", cursor:"pointer"}}
+        onClick={()=>init_web_rtc_data_channel(true)}
+      >
+        Create Data Channel.
+      </button>
 
-      <div>
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type a message..."
-        />
-        <button onClick={() => sendMessage(input)}>Send</button>
-      </div>
+      <button style={{margin:50, width:200, height:50, borderRadius:20, backgroundColor:"lightcyan", cursor:"pointer"}}
+        onClick={()=>init_web_rtc_data_channel(false)}
+      >
+        Register Data Events.
+      </button>
 
-      <ul>
-        {messages.map((msg, i) => (
-          <li key={i}>{msg}</li>
+
+      <button style={{margin:50, width:200, height:50, borderRadius:20, backgroundColor:"lightcyan", cursor:"pointer"}}
+        onClick={()=>local_offer_create_and_send()}
+      >
+        Create - Regiser - Send - Local Offer.
+      </button>
+
+
+
+
+      <div className="terminal">
+        {terminal_messages.map((message, index) => (
+          <p key={index} style={{color:`${message.color}`, margin:0}}>{message.text}</p>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }
