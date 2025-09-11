@@ -7,5 +7,13 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // allowedHosts: ['all', '770b685aa734.ngrok-free.app'],  
+    // proxy: {
+    //   '/ws': {
+    //     target: 'http://localhost:8080',  // your WebSocket backend
+    //     ws: true,                         // proxy WebSockets
+    //     changeOrigin: true
+    //   }
+    // }
   }
 })

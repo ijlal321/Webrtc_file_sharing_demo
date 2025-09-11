@@ -4,6 +4,7 @@ import { handle_offer , handle_answer, handle_ice_candidates} from "./webrtc";
 // establish a ws connection
 const signalingUrl = import.meta.env.VITE_SIGNALING_URL;
 const wsClientConnection = new WebSocket(`${signalingUrl}`);
+// const wsClientConnection = new WebSocket(`${window.location.origin.replace(/^http/, 'ws')}/ws`); // for testing with ngrok
 
 
 // EVENT LISTENERS THAT THE BROWSER'S WEBSOCKET OBJECT GIVES US
