@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import {init_web_rtc_connection, init_web_rtc_data_channel, local_offer_create_and_send, logSelectedCandidatePair} from "./modules/webrtc.js";
+import {init_web_rtc_connection, init_web_rtc_data_channel, local_offer_create_and_send, logSelectedCandidatePair, web_rtc_send_File} from "./modules/webrtc.js";
 import { setTerminalUpdater } from "./modules/utils.js";
 import { registerSocketEvents } from "./modules/ws.js";
 
@@ -25,23 +25,17 @@ function App() {
         Create Webrtc Connection.
       </button>
 
-      {/* <button style={{margin:50, width:200, height:50, borderRadius:20, backgroundColor:"lightcyan", cursor:"pointer"}}
-        onClick={()=>init_web_rtc_data_channel(true)}
-      >
-        Create Data Channel.
-      </button>
-
-      <button style={{margin:50, width:200, height:50, borderRadius:20, backgroundColor:"lightcyan", cursor:"pointer"}}
-        onClick={()=>local_offer_create_and_send()}
-      >
-        Create - Regiser - Send - Local Offer.
-      </button> */}
-
       <button style={{margin:50, width:200, height:50, borderRadius:20, backgroundColor:"lightcyan", cursor:"pointer"}}
         onClick={logSelectedCandidatePair}
       >
         Log Connection Info
       </button>
+
+      <div style={{ display:"flex", justifyItems:"center", alignItems:"center", margin:50, width:200, height:50, borderRadius:20, backgroundColor:"lightcyan", cursor:"pointer"}}>
+        <input type="file" id="fileInput" style={{width:"100%", marginLeft:"10px", cursor:"pointer"}} 
+        onChange={(e)=>web_rtc_send_File(e.target.files[0])}
+        />
+      </div>
 
 
 

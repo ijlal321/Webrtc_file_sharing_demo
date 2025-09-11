@@ -6,6 +6,8 @@ let pc; // define a global local peer connection object that contains everything
 let dataChannel; // we will set this up when we create a peer connection
 const iceCandidatesReceivedBuffer = [];  // all ice candidates received before we had remote_description
 // const iceCandidatesGenerated = []; // for learning purposes, we will store all ice candidates generated inside of an array
+const chunkSize = 1024 * 256; // 16kb
+const bufferedAmountLowThreshold = 1024*1024 * 10;
 
 
 const webRTCConfiguratons = {
@@ -82,18 +84,129 @@ export async function local_offer_create_and_send(){
   add_log_to_terminal("Offer is sent. Now wait for an answer ...")           
 }
 
+// ============== Data Send/Receive =========== //
+
+// export async function web_rtc_send_File(file){
+//   if (!dataChannel){
+//     add_error_to_terminal("Connection not made yet");
+//     return;
+//   }
+//   add_success_to_terminal("Start Sending Data to peer");
+
+//   // send file via data stream in chunks (no parallellism)
+//   let offset = 0; // starting point of chunk to send
+//   const reader = new FileReader();
+//   const file_size = file.size;
+
+//   // register event when file chunk got read
+//   reader.onload = async(e) => {
+//     if (dataChannel.readyState !== "open") {
+//       add_error_to_terminal("Data channel is not open");
+//       return;
+//     }
+//     if ((dataChannel.bufferedAmount + chunkSize)> bufferedAmountLowThreshold){
+//       await sleep(10); 
+//     }
+//     dataChannel.send(e.target.result); // send data
+//     offset += e.target.result.byteLength;  // increase starting point of new chunk to send.
+//     add_log_to_terminal("send a chunk");
+//     console.log("send a chunk. ", (offset/ file_size) * 100 , "% done");
+//     if (offset < file.size) {
+//       readSlice(offset);
+//     } else {
+//       // Done sending
+//       dataChannel.send("EOF"); // Signaling end of file
+//       add_success_to_terminal("File sent successfully.");
+//     }
+//   };
+
+//   const readSlice = (o) => {   // read file from starting point to chunk size or end.
+//     const slice = file.slice(o, o + chunkSize);
+//     reader.readAsArrayBuffer(slice);
+//   };
+
+//   readSlice(0);  // start reading file from 0
+// }
+
+export async function web_rtc_send_File(file) {
+  if (!dataChannel || dataChannel.readyState !== "open") {
+    add_error_to_terminal("Connection not made yet or channel not open");
+    return;
+  }
+  dataChannel.bufferedAmountLowThreshold = bufferedAmountLowThreshold;
+  add_success_to_terminal("Start Sending Data to peer");
+
+  let offset = 0;
+  const file_size = file.size;
+
+  while (offset < file_size) {
+    // Wait for buffer to have space
+    while (dataChannel.bufferedAmount + chunkSize >= bufferedAmountLowThreshold - 100) { // 100 KB Margin just in case
+      await sleep(10); // wait until buffer drains
+    }
+
+    // Read chunk as ArrayBuffer
+    const slice = file.slice(offset, offset + chunkSize);
+    const chunk = await slice.arrayBuffer();
+
+    // Send it
+    dataChannel.send(chunk);
+
+    offset += chunk.byteLength;
+    add_log_to_terminal(`Sent chunk`);
+    console.log(`Sent chunk: ${(offset / file_size * 100).toFixed(2)}%`);
+  }
+
+  // Signal end of file
+  dataChannel.send("EOF");
+  // dataChannel.send(JSON.stringify({ type: "EOF", filename: file.name }));
+  add_success_to_terminal("File sent successfully.");
+}
+
+
+function setupReceiveChannel() {
+  let receivedBuffers = [];
+  let receivedSize = 0;
+
+  dataChannel.onmessage = (event) => {
+    if (event.data !== 'EOF') {
+      receivedBuffers.push(event.data);
+      receivedSize += event.data.byteLength;
+      add_log_to_terminal("chunk received");
+    } else {
+      const receivedBlob = new Blob(receivedBuffers);
+      downloadBlob(receivedBlob, "received_file");
+      add_success_to_terminal("File received and reconstructed.");
+      receivedBuffers = [];
+      receivedSize = 0;
+    }
+  };
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+
 // =========== HANLDE OFEER/ANSWER from WEB_SOCKET =========== //
 
 export async function handle_offer(offer){
     let answer; 
 
-    add_success_to_terminal("WebRTC offer 📨 received. Create your peer connection object");
-    init_web_rtc_connection();
-    init_web_rtc_data_channel(false);
-
+    add_success_to_terminal("WebRTC offer 📨 received. Creating your peer connection object");
+    pc = new RTCPeerConnection(webRTCConfiguratons);
+    register_pc_events(pc);
+    
     await pc.setRemoteDescription(offer);
     add_log_to_terminal("Remote Description Added.");
     
+    init_web_rtc_data_channel(false);
+
     answer = await pc.createAnswer(); 
     add_log_to_terminal("Answer Created.");
     console.log("answer: ", answer);
@@ -149,12 +262,14 @@ export async function handle_ice_candidates(candidate) {
 
 // ========== EVENT REGISTERS ========
 function registerDataChannelEventListeners() {
-    dataChannel.addEventListener("message", (e) => {
-        console.log("message has been received from a Data Channel");
-        // first, we need to extract the actual data from the Data Channel
-        const msg = e.data; 
-        add_log_to_terminal(msg);
-    });
+    // dataChannel.addEventListener("message", (e) => {
+    //   // first, we need to extract the actual data from the Data Channel
+    //   const msg = e.data; 
+    //   console.log("message has been received from a Data Channel: ", msg);
+    //   add_log_to_terminal(JSON.stringify(msg));
+    // });
+    // we will now get file, instead of console logging it
+    setupReceiveChannel();
     dataChannel.addEventListener("close", (e) => {
         // will fire for all users that are listening on this data channel
         console.log("The 'close' event was fired on your data channel object");
@@ -189,7 +304,7 @@ function register_pc_events(pc){
       //   console.log("skipping host one: ", e.candidate);
       // }else{
         ws_sendCandidate(e.candidate);
-        console.log("ICE:", e.candidate);
+        // console.log("ICE:", e.candidate);
       // }
     }else{
       // console.log("ICE Gathering Complete");
@@ -225,4 +340,10 @@ export async function logSelectedCandidatePair() {
       }
     }
   });
+}
+
+
+// Sleep helper
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
