@@ -1,13 +1,22 @@
 import { add_error_to_terminal, add_log_to_terminal, add_success_to_terminal } from "./utils";
 import {ws_sendOffer, ws_sendAnswer, ws_sendCandidate} from "./ws";
 
-// set up global variables
+// ======= HELPER UI UPDAER FN ======= //
+let UI_status_updater;
+
+
+// ========== set up global variables =====//
 let pc; // define a global local peer connection object that contains everything we need to establish a WebRTC connection
 let dataChannel; // we will set this up when we create a peer connection
 const iceCandidatesReceivedBuffer = [];  // all ice candidates received before we had remote_description
-// const iceCandidatesGenerated = []; // for learning purposes, we will store all ice candidates generated inside of an array
+
 const chunkSize = 1024 * 256; // 16kb
-const bufferedAmountLowThreshold = 1024*1024 * 10;
+const bufferedAmountLowThreshold = 1024*1024 * 10; // MAX 10 MB per stream.
+
+// 1 stream , 4MB.
+// 2 stream , 8MB
+// 3 stream , 12MB
+// 4 stream , 16MB
 
 
 const webRTCConfiguratons = {
@@ -86,48 +95,6 @@ export async function local_offer_create_and_send(){
 
 // ============== Data Send/Receive =========== //
 
-// export async function web_rtc_send_File(file){
-//   if (!dataChannel){
-//     add_error_to_terminal("Connection not made yet");
-//     return;
-//   }
-//   add_success_to_terminal("Start Sending Data to peer");
-
-//   // send file via data stream in chunks (no parallellism)
-//   let offset = 0; // starting point of chunk to send
-//   const reader = new FileReader();
-//   const file_size = file.size;
-
-//   // register event when file chunk got read
-//   reader.onload = async(e) => {
-//     if (dataChannel.readyState !== "open") {
-//       add_error_to_terminal("Data channel is not open");
-//       return;
-//     }
-//     if ((dataChannel.bufferedAmount + chunkSize)> bufferedAmountLowThreshold){
-//       await sleep(10); 
-//     }
-//     dataChannel.send(e.target.result); // send data
-//     offset += e.target.result.byteLength;  // increase starting point of new chunk to send.
-//     add_log_to_terminal("send a chunk");
-//     console.log("send a chunk. ", (offset/ file_size) * 100 , "% done");
-//     if (offset < file.size) {
-//       readSlice(offset);
-//     } else {
-//       // Done sending
-//       dataChannel.send("EOF"); // Signaling end of file
-//       add_success_to_terminal("File sent successfully.");
-//     }
-//   };
-
-//   const readSlice = (o) => {   // read file from starting point to chunk size or end.
-//     const slice = file.slice(o, o + chunkSize);
-//     reader.readAsArrayBuffer(slice);
-//   };
-
-//   readSlice(0);  // start reading file from 0
-// }
-
 export async function web_rtc_send_File(file) {
   if (!dataChannel || dataChannel.readyState !== "open") {
     add_error_to_terminal("Connection not made yet or channel not open");
@@ -138,6 +105,7 @@ export async function web_rtc_send_File(file) {
 
   let offset = 0;
   const file_size = file.size;
+  const start_time = Date.now();
 
   while (offset < file_size) {
     // Wait for buffer to have space
@@ -154,15 +122,18 @@ export async function web_rtc_send_File(file) {
 
     offset += chunk.byteLength;
     add_log_to_terminal(`Sent chunk`);
-    console.log(`Sent chunk: ${(offset / file_size * 100).toFixed(2)}%`);
+    const speed = (offset / file_size * 100).toFixed(2).toString();
+    // console.log(`Sent chunk: ${speed}%`);
+    UI_status_updater(`Progress ${speed}%`);
   }
 
   // Signal end of file
   dataChannel.send("EOF");
   // dataChannel.send(JSON.stringify({ type: "EOF", filename: file.name }));
   add_success_to_terminal("File sent successfully.");
+  const timeTakenSec = ((Date.now() - start_time) / 1000).toFixed(2);
+  UI_status_updater(`Time Took ${timeTakenSec} sec`);
 }
-
 
 function setupReceiveChannel() {
   let receivedBuffers = [];
@@ -190,6 +161,10 @@ function downloadBlob(blob, filename) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+export function updateStatusOnUI(fn){
+  UI_status_updater = fn;
 }
 
 
