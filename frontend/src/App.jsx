@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import {init_web_rtc_connection, init_web_rtc_data_channel, local_offer_create_and_send} from "./modules/webrtc.js";
+import {init_web_rtc_connection, init_web_rtc_data_channel, local_offer_create_and_send, logSelectedCandidatePair} from "./modules/webrtc.js";
 import { setTerminalUpdater } from "./modules/utils.js";
 import { registerSocketEvents } from "./modules/ws.js";
 
@@ -25,23 +25,22 @@ function App() {
         Create Webrtc Connection.
       </button>
 
-      <button style={{margin:50, width:200, height:50, borderRadius:20, backgroundColor:"lightcyan", cursor:"pointer"}}
+      {/* <button style={{margin:50, width:200, height:50, borderRadius:20, backgroundColor:"lightcyan", cursor:"pointer"}}
         onClick={()=>init_web_rtc_data_channel(true)}
       >
         Create Data Channel.
       </button>
-{/* 
-      <button style={{margin:50, width:200, height:50, borderRadius:20, backgroundColor:"lightcyan", cursor:"pointer"}}
-        onClick={()=>}
-      >
-        Register Data Events.
-      </button> */}
-
 
       <button style={{margin:50, width:200, height:50, borderRadius:20, backgroundColor:"lightcyan", cursor:"pointer"}}
         onClick={()=>local_offer_create_and_send()}
       >
         Create - Regiser - Send - Local Offer.
+      </button> */}
+
+      <button style={{margin:50, width:200, height:50, borderRadius:20, backgroundColor:"lightcyan", cursor:"pointer"}}
+        onClick={logSelectedCandidatePair}
+      >
+        Log Connection Info
       </button>
 
 
