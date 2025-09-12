@@ -12,6 +12,11 @@ const server = app.listen(PORT, () => {
   console.log(`Signaling server running on port ${PORT}`);
 });
 
+// ✅ Simple GET route
+app.get("/", (req, res) => {
+  res.send("Hello from server 👋");
+});
+
 const wss = new WebSocketServer({ server });
 
 // Step2: Setting Up Websocket Functionality
